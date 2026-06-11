@@ -2,6 +2,8 @@
 
 A macOS desktop pet app built with Swift/AppKit. The pet stays above the Dock, walks left and right, reacts to hover with a teaser animation, and supports eating, scratching, and dragged poses.
 
+The menu bar and right-click menus include size and opacity sliders. Appearance settings are saved automatically and can be restored with `Reset Appearance`.
+
 ## Current Actions
 
 - `walk`
