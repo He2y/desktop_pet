@@ -19,6 +19,7 @@ final class PetController: NSObject {
     private static let idleInteractionInterval: TimeInterval = 12 * 60
     private static let minimumReminderGap: TimeInterval = 2 * 60
     private static let mealReminderMinutes = [8 * 60, 12 * 60 + 30, 18 * 60 + 30]
+    private static let restCornerInset: CGFloat = 8
 
     private let spriteStore: SpriteStore
     private let petView: PetView
@@ -64,8 +65,7 @@ final class PetController: NSObject {
         self.scale = Self.clampedScale(CGFloat(savedScale ?? Self.defaultScale))
         let savedOpacity = defaults.object(forKey: Self.opacityDefaultsKey) as? Double
         self.opacity = Self.clampedOpacity(CGFloat(savedOpacity ?? Self.defaultOpacity))
-        let savedMode = defaults.string(forKey: Self.modeDefaultsKey)
-        self.mode = PetMode(rawValue: savedMode ?? "") ?? .companion
+        self.mode = PetMode.savedValue(defaults.string(forKey: Self.modeDefaultsKey))
 
         let displaySize = Self.displaySize(for: self.scale)
         let origin = Self.initialDockOrigin(windowSize: displaySize)
@@ -88,7 +88,7 @@ final class PetController: NSObject {
     }
 
     func start() {
-        snapWindowToDock(centered: mode == .companion)
+        snapWindowForCurrentMode(centered: mode == .companion)
         automaticWalkLoopsRemaining = Int.random(in: 10...18)
         action = mode.defaultAction
         window.orderFrontRegardless()
@@ -117,6 +117,10 @@ final class PetController: NSObject {
     @objc func eatNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            startRestCornerAction(.eat)
+            return
+        }
         eatLoopsRemaining = 1
         switchTo(.eat)
     }
@@ -124,6 +128,10 @@ final class PetController: NSObject {
     @objc func scratchNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            startRestCornerAction(.scratch)
+            return
+        }
         scratchLoopsRemaining = 1
         switchTo(.scratch)
     }
@@ -131,6 +139,10 @@ final class PetController: NSObject {
     @objc func teaserNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            wakeRestCornerRandomly()
+            return
+        }
         switchTo(.teaser)
     }
 
@@ -138,6 +150,9 @@ final class PetController: NSObject {
         recordInteraction()
         clearHover()
         lastRestReminderDate = Date()
+        if mode.usesRestCorner {
+            snapWindowToRestCorner()
+        }
         sleepLoopsRemaining = 2
         switchTo(.sleep)
     }
@@ -145,6 +160,10 @@ final class PetController: NSObject {
     @objc func petNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            wakeRestCornerRandomly()
+            return
+        }
         petLoopsRemaining = 1
         switchTo(.pet)
     }
@@ -152,6 +171,10 @@ final class PetController: NSObject {
     @objc func walkRightNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            wakeRestCornerRandomly()
+            return
+        }
         automaticWalkLoopsRemaining = Int.random(in: 10...18)
         switchTo(.walk)
     }
@@ -159,6 +182,10 @@ final class PetController: NSObject {
     @objc func walkLeftNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            wakeRestCornerRandomly()
+            return
+        }
         automaticWalkLoopsRemaining = Int.random(in: 10...18)
         switchTo(.walkLeft)
     }
@@ -166,6 +193,10 @@ final class PetController: NSObject {
     @objc func dragPreviewNow() {
         recordInteraction()
         clearHover()
+        if mode.usesRestCorner {
+            wakeRestCornerRandomly()
+            return
+        }
         switchTo(.drag)
     }
 
@@ -184,7 +215,7 @@ final class PetController: NSObject {
         followsDock = true
         clearHover()
         dragActive = false
-        snapWindowToDock(centered: false)
+        snapWindowForCurrentMode(centered: false)
         resumeForMode(preferred: .walk)
     }
 
@@ -266,6 +297,7 @@ final class PetController: NSObject {
 
         petView.onDragBegan = { [weak self] in
             guard let self else { return }
+            guard mode == .companion else { return }
             recordInteraction()
             clearHover()
             dragActive = true
@@ -275,16 +307,22 @@ final class PetController: NSObject {
         }
 
         petView.onDragged = { [weak self] origin in
-            self?.recordInteraction()
-            self?.window.setFrameOrigin(origin)
+            guard let self, dragActive else { return }
+            recordInteraction()
+            window.setFrameOrigin(origin)
         }
 
         petView.onDragEnded = { [weak self] in
             guard let self else { return }
+            guard dragActive else { return }
             recordInteraction()
             dragActive = false
             clearHover()
             resumeForMode(preferred: .walk)
+        }
+
+        petView.onClicked = { [weak self] in
+            self?.handlePetClick()
         }
 
         petView.menu = makeMenu()
@@ -354,7 +392,15 @@ final class PetController: NSObject {
         }
 
         scale = clamped
-        applyAppearance(anchor: followsDock && !dragActive ? .dock : .bottomCenter, persist: persist)
+        let anchor: AppearanceAnchor
+        if mode.usesRestCorner && !dragActive {
+            anchor = .restCorner
+        } else if followsDock && !dragActive {
+            anchor = .dock
+        } else {
+            anchor = .bottomCenter
+        }
+        applyAppearance(anchor: anchor, persist: persist)
     }
 
     private func setOpacity(_ nextOpacity: CGFloat, persist: Bool) {
@@ -388,6 +434,12 @@ final class PetController: NSObject {
                     track: track
                 )
                 nextFrame.origin.y = Self.dockY(for: screen, windowHeight: nextSize.height)
+            } else {
+                nextFrame.origin.x = currentFrame.midX - nextSize.width / 2
+            }
+        case .restCorner:
+            if let screen = window.screen ?? NSScreen.main {
+                nextFrame.origin = Self.restCornerOrigin(for: screen, windowSize: nextSize)
             } else {
                 nextFrame.origin.x = currentFrame.midX - nextSize.width / 2
             }
@@ -445,19 +497,15 @@ final class PetController: NSObject {
         clearHover()
         pendingDockEdgeAction = nil
         followsDock = true
-        snapWindowToDock(centered: false)
+        snapWindowForCurrentMode(centered: false)
 
         switch mode {
-        case .quiet:
+        case .focus:
             lastRestReminderDate = Date()
             sleepLoopsRemaining = 0
             switchTo(.sleep)
         case .companion:
             if action == .sleep {
-                resumeWalking(preferred: .walk)
-            }
-        case .work:
-            if !action.isWalking {
                 resumeWalking(preferred: .walk)
             }
         }
@@ -476,6 +524,44 @@ final class PetController: NSObject {
 
     private func recordInteraction() {
         lastInteractionDate = Date()
+    }
+
+    private func handlePetClick() {
+        recordInteraction()
+        clearHover()
+        dragActive = false
+        pendingDockEdgeAction = nil
+
+        if mode.usesRestCorner {
+            wakeRestCornerRandomly()
+            return
+        }
+
+        if action == .sleep {
+            resumeWalking(preferred: .walk)
+        }
+    }
+
+    private func wakeRestCornerRandomly() {
+        startRestCornerAction(Bool.random() ? .eat : .scratch)
+    }
+
+    private func startRestCornerAction(_ nextAction: PetAction) {
+        snapWindowToRestCorner()
+        switch nextAction {
+        case .scratch:
+            scratchLoopsRemaining = 1
+            switchTo(.scratch)
+        case .eat:
+            eatLoopsRemaining = 1
+            switchTo(.eat)
+        case .sleep:
+            sleepLoopsRemaining = 0
+            switchTo(.sleep)
+        case .teaser, .drag, .pet, .walk, .walkLeft:
+            eatLoopsRemaining = 1
+            switchTo(.eat)
+        }
     }
 
     private func scheduleTimer() {
@@ -562,7 +648,7 @@ final class PetController: NSObject {
     }
 
     private func shouldTriggerRestReminder(at date: Date) -> Bool {
-        guard mode != .quiet else { return false }
+        guard mode == .companion else { return false }
         return date.timeIntervalSince(lastRestReminderDate) >= Self.restReminderInterval
     }
 
@@ -627,7 +713,9 @@ final class PetController: NSObject {
         let frameCount = spriteStore.frameCount(for: action)
         guard frameCount > 0 else { return }
 
-        if followsDock && !dragActive {
+        if mode.usesRestCorner && !dragActive {
+            snapWindowToRestCorner()
+        } else if followsDock && !dragActive {
             snapWindowToDock(centered: false)
         }
 
@@ -682,7 +770,7 @@ final class PetController: NSObject {
                 resumeForMode(preferred: .walk)
             }
         case .sleep:
-            if mode == .quiet {
+            if mode.usesRestCorner {
                 return
             }
             sleepLoopsRemaining -= 1
@@ -776,6 +864,24 @@ final class PetController: NSObject {
     }
 
     private func moveToDockEdgeThen(_ nextAction: PetAction) {
+        if mode.usesRestCorner {
+            snapWindowToRestCorner()
+            switch nextAction {
+            case .eat:
+                eatLoopsRemaining = max(eatLoopsRemaining, 2)
+            case .sleep:
+                sleepLoopsRemaining = max(sleepLoopsRemaining, 2)
+            case .pet:
+                petLoopsRemaining = max(petLoopsRemaining, 1)
+            case .scratch:
+                scratchLoopsRemaining = max(scratchLoopsRemaining, 1)
+            case .teaser, .drag, .walk, .walkLeft:
+                break
+            }
+            switchTo(nextAction)
+            return
+        }
+
         guard let screen = window.screen ?? NSScreen.main else {
             switchTo(nextAction)
             return
@@ -821,10 +927,11 @@ final class PetController: NSObject {
         pendingDockEdgeAction = nil
 
         switch mode {
-        case .quiet:
+        case .focus:
             sleepLoopsRemaining = 0
+            snapWindowToRestCorner()
             switchTo(.sleep)
-        case .companion, .work:
+        case .companion:
             resumeWalking(preferred: preferred)
         }
     }
@@ -854,6 +961,19 @@ final class PetController: NSObject {
             frame.origin.x = Self.clampedX(frame.origin.x, windowWidth: frame.width, track: track)
         }
         window.setFrameOrigin(frame.origin)
+    }
+
+    private func snapWindowForCurrentMode(centered: Bool) {
+        if mode.usesRestCorner {
+            snapWindowToRestCorner()
+        } else {
+            snapWindowToDock(centered: centered)
+        }
+    }
+
+    private func snapWindowToRestCorner() {
+        guard let screen = window.screen ?? NSScreen.main else { return }
+        window.setFrameOrigin(Self.restCornerOrigin(for: screen, windowSize: window.frame.size))
     }
 
     private static func initialDockOrigin(windowSize: CGSize) -> CGPoint {
@@ -896,6 +1016,14 @@ final class PetController: NSObject {
         return max(frame.minY + 8, visible.minY + 8)
     }
 
+    private static func restCornerOrigin(for screen: NSScreen, windowSize: CGSize) -> CGPoint {
+        let visible = screen.visibleFrame
+        return CGPoint(
+            x: visible.maxX - windowSize.width - restCornerInset,
+            y: visible.minY + restCornerInset
+        )
+    }
+
     private static func displaySize(for scale: CGFloat) -> CGSize {
         CGSize(
             width: baseDisplaySize.width * scale,
@@ -929,6 +1057,7 @@ final class PetController: NSObject {
     private enum AppearanceAnchor {
         case bottomCenter
         case dock
+        case restCorner
         case none
     }
 }

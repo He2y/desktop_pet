@@ -22,7 +22,7 @@ enum PetAction: String, CaseIterable {
     var finalFrameHoldDuration: TimeInterval {
         switch self {
         case .sleep:
-            4
+            10
         case .walk, .walkLeft, .teaser, .eat, .scratch, .drag, .pet:
             0
         }

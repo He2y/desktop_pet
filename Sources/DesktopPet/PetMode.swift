@@ -2,25 +2,22 @@ import Foundation
 
 enum PetMode: String, CaseIterable {
     case companion
-    case quiet
-    case work
+    case focus
 
     var menuTitle: String {
         switch self {
         case .companion:
             "Companion Mode"
-        case .quiet:
-            "Quiet Mode"
-        case .work:
-            "Work Mode"
+        case .focus:
+            "Work / Quiet Mode"
         }
     }
 
     var defaultAction: PetAction {
         switch self {
-        case .quiet:
+        case .focus:
             .sleep
-        case .companion, .work:
+        case .companion:
             .walk
         }
     }
@@ -34,6 +31,21 @@ enum PetMode: String, CaseIterable {
     }
 
     var ignoresMouseEvents: Bool {
-        self == .work
+        false
+    }
+
+    var usesRestCorner: Bool {
+        self == .focus
+    }
+
+    static func savedValue(_ rawValue: String?) -> PetMode {
+        switch rawValue {
+        case PetMode.companion.rawValue:
+            .companion
+        case PetMode.focus.rawValue, "quiet", "work":
+            .focus
+        default:
+            .companion
+        }
     }
 }

@@ -10,10 +10,13 @@ final class PetView: NSView {
     var onDragBegan: (() -> Void)?
     var onDragged: ((CGPoint) -> Void)?
     var onDragEnded: (() -> Void)?
+    var onClicked: (() -> Void)?
 
     private var tracking: NSTrackingArea?
     private var dragStartInScreen: CGPoint?
     private var dragWindowOrigin: CGPoint?
+    private var dragHasBegun = false
+    private let dragThreshold: CGFloat = 4
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -58,20 +61,32 @@ final class PetView: NSView {
     override func mouseDown(with event: NSEvent) {
         dragStartInScreen = NSEvent.mouseLocation
         dragWindowOrigin = window?.frame.origin
-        onDragBegan?()
+        dragHasBegun = false
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard let dragStartInScreen, let dragWindowOrigin else { return }
         let current = NSEvent.mouseLocation
         let delta = CGPoint(x: current.x - dragStartInScreen.x, y: current.y - dragStartInScreen.y)
+
+        if !dragHasBegun {
+            guard hypot(delta.x, delta.y) >= dragThreshold else { return }
+            dragHasBegun = true
+            onDragBegan?()
+        }
+
         onDragged?(CGPoint(x: dragWindowOrigin.x + delta.x, y: dragWindowOrigin.y + delta.y))
     }
 
     override func mouseUp(with event: NSEvent) {
+        if dragHasBegun {
+            onDragEnded?()
+        } else {
+            onClicked?()
+        }
         dragStartInScreen = nil
         dragWindowOrigin = nil
-        onDragEnded?()
+        dragHasBegun = false
     }
 
     override func draw(_ dirtyRect: NSRect) {

@@ -7,13 +7,12 @@ The menu bar and right-click menus include mode switching plus size and opacity 
 ## Modes
 
 - `Companion Mode`: normal walking, hover teaser, dragging, and playful automatic actions.
-- `Quiet Mode`: sleeps by default with low-frequency animation.
-- `Work Mode`: keeps walking above the Dock, disables hover/drag interruption, and lets mouse events pass through the pet window.
+- `Work / Quiet Mode`: combines the old Quiet and Work behavior. The cat stays in the bottom-right corner and sleeps by default. Meal reminders trigger eating, while click wake-ups randomly trigger eating or scratching.
 
 ## Life Reminders
 
 - Meal reminders at `08:00`, `12:30`, and `18:30`: the cat walks to a Dock edge and eats.
-- Rest reminder every `50` minutes: the cat lies down and sleeps.
+- Rest reminder every `50` minutes in Companion Mode: the cat lies down and sleeps.
 - Idle reminder after `12` minutes without interaction in Companion Mode: the cat plays the petting interaction.
 
 ## Current Actions
