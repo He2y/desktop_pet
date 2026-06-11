@@ -120,6 +120,13 @@ if command -v xattr >/dev/null 2>&1; then
   xattr -dr com.apple.quarantine "$INSTALL_PATH" 2>/dev/null || true
 fi
 
+touch "$INSTALL_PATH"
+
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "$LSREGISTER" ]]; then
+  "$LSREGISTER" -f "$INSTALL_PATH" >/dev/null 2>&1 || true
+fi
+
 if command -v codesign >/dev/null 2>&1; then
   codesign --verify --deep --strict "$INSTALL_PATH" >/dev/null
 fi

@@ -60,6 +60,14 @@ The installer requires macOS with Swift available. If Swift is missing, install 
 xcode-select --install
 ```
 
+If Finder still shows the app with a disabled/prohibited badge after installation, the app bundle is usually installed correctly but Finder has not refreshed its LaunchServices cache. Refresh it with:
+
+```bash
+touch "/Applications/Desktop Pet.app"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/Desktop Pet.app"
+killall Finder
+```
+
 ## Build
 
 ```bash
