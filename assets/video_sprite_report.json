@@ -151,6 +151,56 @@
         306.7,
         323
       ]
+    },
+    "sleep": {
+      "png_count": 121,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 21,
+      "bottom_margin_min_mean_max": [
+        21,
+        31.1,
+        45
+      ],
+      "width_min_mean_max": [
+        283,
+        314.0,
+        324
+      ],
+      "height_min_mean_max": [
+        121,
+        141.8,
+        160
+      ]
+    },
+    "pet": {
+      "png_count": 121,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 18,
+      "bottom_margin_min_mean_max": [
+        18,
+        27.8,
+        38
+      ],
+      "width_min_mean_max": [
+        240,
+        286.3,
+        318
+      ],
+      "height_min_mean_max": [
+        247,
+        294.2,
+        325
+      ]
     }
   },
   "walk_left_is_horizontal_mirror_of_walk": true

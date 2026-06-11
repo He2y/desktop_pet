@@ -97,7 +97,7 @@ def validate(actions: list[str]) -> dict[str, object]:
 
 
 def main() -> None:
-    actions = ["walk", "walk_left", "teaser", "eat", "scratch", "drag"]
+    actions = ["walk", "walk_left", "teaser", "eat", "scratch", "drag", "sleep", "pet"]
     for action in actions:
         paths = sorted((SPRITE_ROOT / action).glob("frame_*.png"))
         if not paths:

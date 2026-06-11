@@ -5,13 +5,17 @@ enum PetAction: String, CaseIterable {
     case drag
     case scratch
     case teaser
+    case sleep
+    case pet
     case walk
     case walkLeft = "walk_left"
 
     var framesPerSecond: TimeInterval {
         switch self {
-        case .walk, .walkLeft, .teaser, .eat, .scratch, .drag:
+        case .walk, .walkLeft, .teaser, .eat, .scratch, .drag, .pet:
             24
+        case .sleep:
+            12
         }
     }
 

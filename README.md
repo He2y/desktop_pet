@@ -1,8 +1,20 @@
 # Desktop Pet
 
-A macOS desktop pet app built with Swift/AppKit. The pet stays above the Dock, walks left and right, reacts to hover with a teaser animation, and supports eating, scratching, and dragged poses.
+A macOS desktop pet app built with Swift/AppKit. The pet stays above the Dock, walks left and right, reacts to hover with a teaser animation, and supports eating, sleeping, petting, scratching, and dragged poses.
 
-The menu bar and right-click menus include size and opacity sliders. Appearance settings are saved automatically and can be restored with `Reset Appearance`.
+The menu bar and right-click menus include mode switching plus size and opacity sliders. Appearance and mode settings are saved automatically and can be restored with `Reset Appearance`.
+
+## Modes
+
+- `Companion Mode`: normal walking, hover teaser, dragging, and playful automatic actions.
+- `Quiet Mode`: sleeps by default with low-frequency animation.
+- `Work Mode`: keeps walking above the Dock, disables hover/drag interruption, and lets mouse events pass through the pet window.
+
+## Life Reminders
+
+- Meal reminders at `08:00`, `12:30`, and `18:30`: the cat walks to a Dock edge and eats.
+- Rest reminder every `50` minutes: the cat lies down and sleeps.
+- Idle reminder after `12` minutes without interaction in Companion Mode: the cat plays the petting interaction.
 
 ## Current Actions
 
@@ -12,6 +24,8 @@ The menu bar and right-click menus include size and opacity sliders. Appearance 
 - `eat`
 - `scratch`
 - `drag`
+- `sleep`
+- `pet`
 
 All runtime sprites are optimized transparent `384x384` PNG frame sequences under `assets/sprites`. GIF exports for quick review are under `assets/gifs`, but they are not bundled into the app unless `INCLUDE_GIF_PREVIEWS=1` is set during packaging.
 

@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 SPRITE_DIR = Path("assets/sprites")
 OUT = Path("assets/video_sprite_preview_contact_sheet.jpg")
-ACTIONS = ["walk", "walk_left", "teaser", "eat", "scratch", "drag"]
+ACTIONS = ["walk", "walk_left", "teaser", "eat", "scratch", "drag", "sleep", "pet"]
 FRAME_COLUMNS = 6
 CELL = 168
 LABEL = 34

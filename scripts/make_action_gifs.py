@@ -8,7 +8,7 @@ from PIL import Image
 
 SPRITE_DIR = Path("assets/sprites")
 OUT_DIR = Path("assets/gifs")
-ACTIONS = ["walk", "walk_left", "teaser", "eat", "scratch", "drag"]
+ACTIONS = ["walk", "walk_left", "teaser", "eat", "scratch", "drag", "sleep", "pet"]
 TRANSPARENT_INDEX = 255
 FRAME_DURATION_MS = {
     "walk": 42,
@@ -17,6 +17,8 @@ FRAME_DURATION_MS = {
     "eat": 42,
     "scratch": 42,
     "drag": 42,
+    "sleep": 84,
+    "pet": 42,
 }
 
 

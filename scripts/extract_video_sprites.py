@@ -27,6 +27,7 @@ class ActionConfig:
     crop_pad: int = 18
     min_component_area: int = 160
     source_crop: tuple[int, int, int, int] | None = None
+    frame_stride: int = 1
 
 
 SOURCES: dict[str, ActionConfig] = {
@@ -60,6 +61,20 @@ SOURCES: dict[str, ActionConfig] = {
         target_long_edge=430,
         bottom_margin=36,
         source_crop=(70, 120, 650, 1180),
+    ),
+    "sleep": ActionConfig(
+        source=Path("source_videos/sleep_source.mp4"),
+        keep_components=1,
+        target_long_edge=430,
+        bottom_margin=28,
+        frame_stride=2,
+    ),
+    "pet": ActionConfig(
+        source=Path("source_videos/pet_source.mp4"),
+        keep_components=1,
+        target_long_edge=430,
+        bottom_margin=26,
+        frame_stride=2,
     ),
 }
 
@@ -210,7 +225,7 @@ def process_action(action: str, config: ActionConfig) -> int:
     raw_dir = TMP_ROOT / action
     run_ffmpeg(config.source, raw_dir)
 
-    raw_paths = sorted(raw_dir.glob("raw_*.png"))
+    raw_paths = sorted(raw_dir.glob("raw_*.png"))[::config.frame_stride]
     if not raw_paths:
         raise RuntimeError(f"No frames extracted for {action}")
 
@@ -331,7 +346,7 @@ def validate(actions: list[str]) -> dict[str, object]:
 def main() -> None:
     counts = {action: process_action(action, config) for action, config in SOURCES.items()}
     counts["walk_left"] = mirror_walk()
-    actions = ["walk", "walk_left", "teaser", "eat", "scratch", "drag"]
+    actions = ["walk", "walk_left", "teaser", "eat", "scratch", "drag", "sleep", "pet"]
     report = validate(actions)
     REPORT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps({"counts": counts, **{k: v for k, v in report.items() if k != "actions"}}, indent=2))
