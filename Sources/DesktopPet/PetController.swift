@@ -30,6 +30,7 @@ final class PetController: NSObject {
     private var action: PetAction = .walk
     private var frameIndex = 0
     private var loopCount = 0
+    private var finalFrameHoldTicksRemaining = 0
     private var scale: CGFloat
     private var opacity: CGFloat
     private var mode: PetMode
@@ -630,6 +631,14 @@ final class PetController: NSObject {
             snapWindowToDock(centered: false)
         }
 
+        if finalFrameHoldTicksRemaining > 0 {
+            finalFrameHoldTicksRemaining -= 1
+            if finalFrameHoldTicksRemaining <= 0 {
+                finishActionLoop()
+            }
+            return
+        }
+
         if let image = spriteStore.image(for: action, index: frameIndex) {
             petView.image = image
         }
@@ -637,10 +646,21 @@ final class PetController: NSObject {
 
         frameIndex += 1
         if frameIndex >= frameCount {
-            frameIndex = 0
-            loopCount += 1
-            decideAfterLoop()
+            let holdTicks = finalFrameHoldTicks(for: action)
+            if holdTicks > 0 {
+                frameIndex = frameCount - 1
+                finalFrameHoldTicksRemaining = holdTicks
+            } else {
+                finishActionLoop()
+            }
         }
+    }
+
+    private func finishActionLoop() {
+        finalFrameHoldTicksRemaining = 0
+        frameIndex = 0
+        loopCount += 1
+        decideAfterLoop()
     }
 
     private func decideAfterLoop() {
@@ -814,6 +834,7 @@ final class PetController: NSObject {
         action = next
         frameIndex = 0
         loopCount = 0
+        finalFrameHoldTicksRemaining = 0
         scheduleTimer()
         show(action: next)
     }
@@ -892,6 +913,10 @@ final class PetController: NSObject {
 
     private static func percentString(for value: CGFloat) -> String {
         "\(Int(round(value * 100)))%"
+    }
+
+    private func finalFrameHoldTicks(for action: PetAction) -> Int {
+        Int(round(action.finalFrameHoldDuration * action.framesPerSecond))
     }
 
     private static func clampedX(_ value: CGFloat, windowWidth: CGFloat, track: CGRect) -> CGFloat {
