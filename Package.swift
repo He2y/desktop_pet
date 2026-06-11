@@ -13,10 +13,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "DesktopPet",
-            path: "Sources/DesktopPet",
-            resources: [
-                .process("Resources")
-            ]
+            path: "Sources/DesktopPet"
         )
     ]
 )

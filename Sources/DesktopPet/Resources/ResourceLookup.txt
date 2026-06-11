@@ -1,2 +1,0 @@
-DesktopPet keeps runtime sprite assets in the app bundle at Resources/assets/sprites
-when packaged, and reads the project-level assets/sprites folder while developing.

@@ -72,10 +72,6 @@ final class SpriteStore {
             candidates.append(resourceURL.appendingPathComponent("assets/sprites", isDirectory: true))
         }
 
-        if let moduleResourceURL = Bundle.module.resourceURL {
-            candidates.append(moduleResourceURL.appendingPathComponent("assets/sprites", isDirectory: true))
-        }
-
         let cwd = URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true)
         candidates.append(cwd.appendingPathComponent("assets/sprites", isDirectory: true))
         candidates.append(cwd.deletingLastPathComponent().appendingPathComponent("assets/sprites", isDirectory: true))
