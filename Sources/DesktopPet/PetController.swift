@@ -66,6 +66,11 @@ final class PetController: NSObject {
         switchTo(.scratch)
     }
 
+    @objc func teaserNow() {
+        clearHover()
+        switchTo(.teaser)
+    }
+
     @objc func walkRightNow() {
         clearHover()
         automaticWalkLoopsRemaining = Int.random(in: 10...18)
@@ -144,6 +149,7 @@ final class PetController: NSObject {
         menu.addItem(withTitle: "Eat", action: #selector(eatNow), keyEquivalent: "")
         menu.addItem(withTitle: "Drag Pose", action: #selector(dragPreviewNow), keyEquivalent: "")
         menu.addItem(withTitle: "Scratch", action: #selector(scratchNow), keyEquivalent: "")
+        menu.addItem(withTitle: "Teaser", action: #selector(teaserNow), keyEquivalent: "")
         menu.addItem(withTitle: "Walk Right", action: #selector(walkRightNow), keyEquivalent: "")
         menu.addItem(withTitle: "Walk Left", action: #selector(walkLeftNow), keyEquivalent: "")
         menu.addItem(.separator())

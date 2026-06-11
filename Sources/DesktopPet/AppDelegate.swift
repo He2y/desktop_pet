@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Eat", action: #selector(PetController.eatNow), keyEquivalent: "")
         menu.addItem(withTitle: "Drag Pose", action: #selector(PetController.dragPreviewNow), keyEquivalent: "")
         menu.addItem(withTitle: "Scratch", action: #selector(PetController.scratchNow), keyEquivalent: "")
+        menu.addItem(withTitle: "Teaser", action: #selector(PetController.teaserNow), keyEquivalent: "")
         menu.addItem(withTitle: "Walk Right", action: #selector(PetController.walkRightNow), keyEquivalent: "")
         menu.addItem(withTitle: "Walk Left", action: #selector(PetController.walkLeftNow), keyEquivalent: "")
         menu.addItem(.separator())
