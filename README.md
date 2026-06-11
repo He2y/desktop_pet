@@ -30,15 +30,15 @@ All runtime sprites are optimized transparent `384x384` PNG frame sequences unde
 
 ## One-Command Install
 
-Run this command in Terminal to build and install the app:
+Run this command in Terminal to install the app:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/He2y/desktop_pet/main/scripts/install_macos_app.sh)"
+/bin/bash -c "$(curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused https://raw.githubusercontent.com/He2y/desktop_pet/main/scripts/install_macos_app.sh)"
 ```
 
-The installer clones the latest source, builds a signed local app bundle, and installs it as `/Applications/Desktop Pet.app`. If `/Applications` is not writable, it automatically installs to `~/Applications/Desktop Pet.app`.
+The one-command installer downloads the latest prebuilt app from GitHub Releases and installs it as `/Applications/Desktop Pet.app`. If `/Applications` is not writable, it automatically installs to `~/Applications/Desktop Pet.app`.
 
-To install from an already cloned repository:
+To build and install from an already cloned repository:
 
 ```bash
 scripts/install_macos_app.sh
@@ -52,9 +52,12 @@ INSTALL_DESTINATION="$HOME/Applications" scripts/install_macos_app.sh
 
 # Install and launch immediately
 OPEN_AFTER_INSTALL=1 scripts/install_macos_app.sh
+
+# Force a source build instead of downloading the release package
+INSTALL_FROM_SOURCE=1 scripts/install_macos_app.sh
 ```
 
-The installer requires macOS with Swift available. If Swift is missing, install Xcode Command Line Tools first:
+Normal one-command installation does not require Xcode. Source builds require Xcode Command Line Tools:
 
 ```bash
 xcode-select --install
