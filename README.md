@@ -28,6 +28,38 @@ The menu bar and right-click menus include mode switching plus size and opacity 
 
 All runtime sprites are optimized transparent `384x384` PNG frame sequences under `assets/sprites`. GIF exports for quick review are under `assets/gifs`, but they are not bundled into the app unless `INCLUDE_GIF_PREVIEWS=1` is set during packaging.
 
+## One-Command Install
+
+Run this command in Terminal to build and install the app:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/He2y/desktop_pet/main/scripts/install_macos_app.sh)"
+```
+
+The installer clones the latest source, builds a signed local app bundle, and installs it as `/Applications/Desktop Pet.app`. If `/Applications` is not writable, it automatically installs to `~/Applications/Desktop Pet.app`.
+
+To install from an already cloned repository:
+
+```bash
+scripts/install_macos_app.sh
+```
+
+Optional install settings:
+
+```bash
+# Install to a custom directory or full .app path
+INSTALL_DESTINATION="$HOME/Applications" scripts/install_macos_app.sh
+
+# Install and launch immediately
+OPEN_AFTER_INSTALL=1 scripts/install_macos_app.sh
+```
+
+The installer requires macOS with Swift available. If Swift is missing, install Xcode Command Line Tools first:
+
+```bash
+xcode-select --install
+```
+
 ## Build
 
 ```bash
