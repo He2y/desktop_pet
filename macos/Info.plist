@@ -8,6 +8,8 @@
     <string>Desktop Pet</string>
     <key>CFBundleExecutable</key>
     <string>DesktopPet</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
     <key>CFBundleIdentifier</key>
     <string>local.desktop-pet</string>
     <key>CFBundleInfoDictionaryVersion</key>
