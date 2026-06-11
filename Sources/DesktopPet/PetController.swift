@@ -15,19 +15,22 @@ final class PetController: NSObject {
     private static let modeDefaultsKey = "desktopPet.mode"
     private static let reminderCheckInterval: TimeInterval = 30
     private static let mealReminderWindow: TimeInterval = 90
-    private static let restReminderInterval: TimeInterval = 50 * 60
-    private static let idleInteractionInterval: TimeInterval = 12 * 60
     private static let minimumReminderGap: TimeInterval = 2 * 60
-    private static let mealReminderMinutes = [8 * 60, 12 * 60 + 30, 18 * 60 + 30]
     private static let restCornerInset: CGFloat = 8
+    private static let bubbleScreenInset: CGFloat = 10
+    private static let bubbleDuration: TimeInterval = 9
 
     private let spriteStore: SpriteStore
     private let petView: PetView
     private let window: NSWindow
+    private let bubbleView: ReminderBubbleView
+    private let bubbleWindow: NSWindow
     private let defaults: UserDefaults
+    private var reminderSettingsWindowController: ReminderSettingsWindowController?
     private var timer: Timer?
     private var hoverTimer: Timer?
     private var reminderTimer: Timer?
+    private var bubbleTimer: Timer?
     private var action: PetAction = .walk
     private var frameIndex = 0
     private var loopCount = 0
@@ -35,6 +38,7 @@ final class PetController: NSObject {
     private var scale: CGFloat
     private var opacity: CGFloat
     private var mode: PetMode
+    private var reminderSettings: ReminderSettings
     private var hoverActive = false
     private var hoverTeaserConsumed = false
     private var dragActive = false
@@ -50,11 +54,17 @@ final class PetController: NSObject {
     private var lastIdleReminderDate = Date.distantPast
     private var lastReminderDate = Date.distantPast
     private var triggeredMealReminderKeys: Set<String> = []
+    private var pendingReminderBubbleMessage: String?
     private var sizeLabels: [NSTextField] = []
     private var sizeSliders: [NSSlider] = []
     private var opacityLabels: [NSTextField] = []
     private var opacitySliders: [NSSlider] = []
     private var modeMenuItems: [NSMenuItem] = []
+    private var reminderSummaryItems: [NSMenuItem] = []
+    private var mealReminderMenuItems: [NSMenuItem] = []
+    private var restReminderMenuItems: [NSMenuItem] = []
+    private var idleReminderMenuItems: [NSMenuItem] = []
+    private var launchAtLoginMenuItems: [NSMenuItem] = []
 
     init(spriteStore: SpriteStore) {
         self.spriteStore = spriteStore
@@ -66,6 +76,7 @@ final class PetController: NSObject {
         let savedOpacity = defaults.object(forKey: Self.opacityDefaultsKey) as? Double
         self.opacity = Self.clampedOpacity(CGFloat(savedOpacity ?? Self.defaultOpacity))
         self.mode = PetMode.savedValue(defaults.string(forKey: Self.modeDefaultsKey))
+        self.reminderSettings = ReminderSettings.load(from: defaults)
 
         let displaySize = Self.displaySize(for: self.scale)
         let origin = Self.initialDockOrigin(windowSize: displaySize)
@@ -77,10 +88,18 @@ final class PetController: NSObject {
             backing: .buffered,
             defer: false
         )
+        self.bubbleView = ReminderBubbleView(frame: CGRect(origin: .zero, size: CGSize(width: 220, height: 72)))
+        self.bubbleWindow = NSWindow(
+            contentRect: CGRect(origin: origin, size: CGSize(width: 220, height: 72)),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
 
         super.init()
 
         configureWindow()
+        configureBubbleWindow()
         configureViewCallbacks()
         applyModeInteractivity()
         applyAppearance(anchor: .bottomCenter, persist: false)
@@ -210,6 +229,63 @@ final class PetController: NSObject {
         setMode(nextMode, persist: true)
     }
 
+    @objc func openReminderSettings(_ sender: Any?) {
+        let controller: ReminderSettingsWindowController
+        if let existing = reminderSettingsWindowController {
+            existing.update(settings: reminderSettings)
+            controller = existing
+        } else {
+            controller = ReminderSettingsWindowController(settings: reminderSettings) { [weak self] settings in
+                self?.setReminderSettings(settings, persist: true)
+            }
+            reminderSettingsWindowController = controller
+        }
+        controller.show()
+    }
+
+    @objc func toggleMealReminders(_ sender: NSMenuItem) {
+        var next = reminderSettings
+        next.mealRemindersEnabled.toggle()
+        setReminderSettings(next, persist: true)
+    }
+
+    @objc func toggleRestReminders(_ sender: NSMenuItem) {
+        var next = reminderSettings
+        next.restRemindersEnabled.toggle()
+        setReminderSettings(next, persist: true)
+    }
+
+    @objc func toggleIdleReminders(_ sender: NSMenuItem) {
+        var next = reminderSettings
+        next.idleRemindersEnabled.toggle()
+        setReminderSettings(next, persist: true)
+    }
+
+    @objc func previewMealReminder(_ sender: Any?) {
+        recordInteraction()
+        clearHover()
+        pendingReminderBubbleMessage = Self.randomMealReminderMessage()
+        eatLoopsRemaining = 2
+        moveToDockEdgeThen(.eat)
+    }
+
+    @objc func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        let nextEnabled = !LoginItemManager.isEnabled
+        do {
+            try LoginItemManager.setEnabled(nextEnabled)
+            updateLaunchAtLoginControls()
+            if LoginItemManager.status == .requiresApproval {
+                showLaunchAtLoginApprovalAlert()
+            }
+        } catch {
+            showLaunchAtLoginError(error)
+        }
+    }
+
+    @objc func openLoginItemsSettings(_ sender: Any?) {
+        LoginItemManager.openSystemSettings()
+    }
+
     @objc func returnToDock() {
         recordInteraction()
         followsDock = true
@@ -224,6 +300,8 @@ final class PetController: NSObject {
         menu.addItem(withTitle: "Return to Dock", action: #selector(returnToDock), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(makeModeMenuItem())
+        menu.addItem(makeRemindersMenuItem())
+        menu.addItem(makeLaunchAtLoginMenuItem())
         menu.addItem(.separator())
         menu.addItem(makeSliderItem(
             title: "Size",
@@ -260,6 +338,8 @@ final class PetController: NSObject {
         }
         updateAppearanceControls()
         updateModeControls()
+        updateReminderControls()
+        updateLaunchAtLoginControls()
         return menu
     }
 
@@ -277,6 +357,23 @@ final class PetController: NSObject {
         window.contentView = petView
         window.isReleasedWhenClosed = false
         petView.autoresizingMask = [.width, .height]
+    }
+
+    private func configureBubbleWindow() {
+        bubbleWindow.isOpaque = false
+        bubbleWindow.backgroundColor = .clear
+        bubbleWindow.hasShadow = false
+        bubbleWindow.level = .statusBar
+        bubbleWindow.collectionBehavior = [
+            .canJoinAllSpaces,
+            .fullScreenAuxiliary,
+            .stationary,
+            .ignoresCycle
+        ]
+        bubbleWindow.ignoresMouseEvents = true
+        bubbleWindow.contentView = bubbleView
+        bubbleWindow.isReleasedWhenClosed = false
+        bubbleWindow.alphaValue = 0
     }
 
     private func configureViewCallbacks() {
@@ -384,6 +481,61 @@ final class PetController: NSObject {
         return parent
     }
 
+    private func makeRemindersMenuItem() -> NSMenuItem {
+        let parent = NSMenuItem(title: "Reminders", action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: "Reminders")
+
+        let summaryItem = NSMenuItem(title: reminderSummaryTitle(), action: nil, keyEquivalent: "")
+        summaryItem.isEnabled = false
+        reminderSummaryItems.append(summaryItem)
+        submenu.addItem(summaryItem)
+        submenu.addItem(.separator())
+
+        let mealItem = NSMenuItem(title: "Meal Reminders", action: #selector(toggleMealReminders(_:)), keyEquivalent: "")
+        mealItem.target = self
+        mealReminderMenuItems.append(mealItem)
+        submenu.addItem(mealItem)
+
+        let restItem = NSMenuItem(title: "Rest Reminders", action: #selector(toggleRestReminders(_:)), keyEquivalent: "")
+        restItem.target = self
+        restReminderMenuItems.append(restItem)
+        submenu.addItem(restItem)
+
+        let idleItem = NSMenuItem(title: "Idle Check-ins", action: #selector(toggleIdleReminders(_:)), keyEquivalent: "")
+        idleItem.target = self
+        idleReminderMenuItems.append(idleItem)
+        submenu.addItem(idleItem)
+
+        submenu.addItem(.separator())
+        let settingsItem = NSMenuItem(title: "Reminder Settings...", action: #selector(openReminderSettings(_:)), keyEquivalent: "")
+        settingsItem.target = self
+        submenu.addItem(settingsItem)
+
+        let previewItem = NSMenuItem(title: "Preview Meal Reminder", action: #selector(previewMealReminder(_:)), keyEquivalent: "")
+        previewItem.target = self
+        submenu.addItem(previewItem)
+
+        parent.submenu = submenu
+        return parent
+    }
+
+    private func makeLaunchAtLoginMenuItem() -> NSMenuItem {
+        let parent = NSMenuItem(title: "Launch at Login", action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: "Launch at Login")
+
+        let toggleItem = NSMenuItem(title: LoginItemManager.menuTitle, action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
+        toggleItem.target = self
+        launchAtLoginMenuItems.append(toggleItem)
+        submenu.addItem(toggleItem)
+
+        let settingsItem = NSMenuItem(title: "Open Login Items Settings...", action: #selector(openLoginItemsSettings(_:)), keyEquivalent: "")
+        settingsItem.target = self
+        submenu.addItem(settingsItem)
+
+        parent.submenu = submenu
+        return parent
+    }
+
     private func setScale(_ nextScale: CGFloat, persist: Bool) {
         let clamped = Self.clampedScale(nextScale)
         guard abs(clamped - scale) > 0.001 else {
@@ -449,6 +601,9 @@ final class PetController: NSObject {
 
         window.setFrame(nextFrame, display: true)
         petView.frame = CGRect(origin: .zero, size: nextSize)
+        if bubbleWindow.isVisible {
+            positionBubbleWindow()
+        }
         updateAppearanceControls()
 
         if persist {
@@ -520,6 +675,70 @@ final class PetController: NSObject {
             let rawValue = item.representedObject as? String
             item.state = rawValue == mode.rawValue ? .on : .off
         }
+    }
+
+    private func setReminderSettings(_ nextSettings: ReminderSettings, persist: Bool) {
+        reminderSettings = nextSettings.normalized()
+        triggeredMealReminderKeys.removeAll()
+        lastReminderDate = Date.distantPast
+        lastRestReminderDate = Date()
+        if persist {
+            reminderSettings.save(to: defaults)
+        }
+        updateReminderControls()
+        reminderSettingsWindowController?.update(settings: reminderSettings)
+    }
+
+    private func updateReminderControls() {
+        for item in reminderSummaryItems {
+            item.title = reminderSummaryTitle()
+        }
+        for item in mealReminderMenuItems {
+            item.state = reminderSettings.mealRemindersEnabled ? .on : .off
+        }
+        for item in restReminderMenuItems {
+            item.state = reminderSettings.restRemindersEnabled ? .on : .off
+        }
+        for item in idleReminderMenuItems {
+            item.state = reminderSettings.idleRemindersEnabled ? .on : .off
+        }
+    }
+
+    private func updateLaunchAtLoginControls() {
+        for item in launchAtLoginMenuItems {
+            item.title = LoginItemManager.menuTitle
+            item.state = LoginItemManager.isEnabled ? .on : .off
+            item.isEnabled = LoginItemManager.status != .notFound
+        }
+    }
+
+    private func showLaunchAtLoginApprovalAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Launch at Login needs approval"
+        alert.informativeText = "macOS needs you to approve Desktop Pet in Login Items before it can start automatically."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "Later")
+        if alert.runModal() == .alertFirstButtonReturn {
+            LoginItemManager.openSystemSettings()
+        }
+    }
+
+    private func showLaunchAtLoginError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "Could not update Launch at Login"
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "OK")
+        if alert.runModal() == .alertFirstButtonReturn {
+            LoginItemManager.openSystemSettings()
+        }
+        updateLaunchAtLoginControls()
+    }
+
+    private func reminderSummaryTitle() -> String {
+        "Meals \(reminderSettings.mealSummary) | Rest \(reminderSettings.restSummary) | Idle \(reminderSettings.idleSummary)"
     }
 
     private func recordInteraction() {
@@ -615,12 +834,13 @@ final class PetController: NSObject {
     }
 
     private func dueMealReminderKey(at date: Date) -> String? {
+        guard reminderSettings.mealRemindersEnabled else { return nil }
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: date)
         guard let hour = components.hour, let minute = components.minute else { return nil }
 
         let minuteOfDay = hour * 60 + minute
-        for mealMinute in Self.mealReminderMinutes {
+        for (mealIndex, mealMinute) in reminderSettings.mealMinutes.enumerated() {
             guard abs(minuteOfDay - mealMinute) <= 1 else { continue }
 
             let scheduledHour = mealMinute / 60
@@ -638,7 +858,7 @@ final class PetController: NSObject {
             }
 
             let day = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
-            let key = "\(day)-\(mealMinute)"
+            let key = "\(day)-\(mealIndex)-\(mealMinute)"
             if !triggeredMealReminderKeys.contains(key) {
                 return key
             }
@@ -648,14 +868,17 @@ final class PetController: NSObject {
     }
 
     private func shouldTriggerRestReminder(at date: Date) -> Bool {
+        guard reminderSettings.restRemindersEnabled else { return false }
         guard mode == .companion else { return false }
-        return date.timeIntervalSince(lastRestReminderDate) >= Self.restReminderInterval
+        return date.timeIntervalSince(lastRestReminderDate) >= TimeInterval(reminderSettings.restIntervalMinutes * 60)
     }
 
     private func shouldTriggerIdleReminder(at date: Date) -> Bool {
+        guard reminderSettings.idleRemindersEnabled else { return false }
         guard mode == .companion else { return false }
-        guard date.timeIntervalSince(lastInteractionDate) >= Self.idleInteractionInterval else { return false }
-        return date.timeIntervalSince(lastIdleReminderDate) >= Self.idleInteractionInterval
+        let interval = TimeInterval(reminderSettings.idleIntervalMinutes * 60)
+        guard date.timeIntervalSince(lastInteractionDate) >= interval else { return false }
+        return date.timeIntervalSince(lastIdleReminderDate) >= interval
     }
 
     private func canStartAutomaticReminder(at date: Date) -> Bool {
@@ -671,6 +894,7 @@ final class PetController: NSObject {
 
     private func triggerMealReminder(at date: Date) {
         lastReminderDate = date
+        pendingReminderBubbleMessage = Self.randomMealReminderMessage()
         eatLoopsRemaining = 2
         moveToDockEdgeThen(.eat)
     }
@@ -682,6 +906,7 @@ final class PetController: NSObject {
         pendingDockEdgeAction = nil
         sleepLoopsRemaining = 3
         switchTo(.sleep)
+        showReminderBubble(Self.randomRestReminderMessage())
     }
 
     private func triggerIdleReminder(at date: Date) {
@@ -691,6 +916,7 @@ final class PetController: NSObject {
         pendingDockEdgeAction = nil
         petLoopsRemaining = 1
         switchTo(.pet)
+        showReminderBubble(Self.randomIdleReminderMessage())
     }
 
     private func startHoverTeaserIfAllowed() {
@@ -709,6 +935,77 @@ final class PetController: NSObject {
         hoverTimer = nil
     }
 
+    private func showPendingReminderBubbleIfNeeded() {
+        guard let message = pendingReminderBubbleMessage else { return }
+        pendingReminderBubbleMessage = nil
+        showReminderBubble(message)
+    }
+
+    private func showReminderBubble(_ message: String) {
+        bubbleTimer?.invalidate()
+        let size = bubbleView.update(message: message)
+        bubbleWindow.setFrame(CGRect(origin: bubbleWindow.frame.origin, size: size), display: true)
+        positionBubbleWindow()
+        bubbleWindow.alphaValue = 0
+        bubbleWindow.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            bubbleWindow.animator().alphaValue = 1
+        }
+
+        bubbleTimer = Timer.scheduledTimer(withTimeInterval: Self.bubbleDuration, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.hideReminderBubble()
+            }
+        }
+        if let bubbleTimer {
+            RunLoop.main.add(bubbleTimer, forMode: .common)
+        }
+    }
+
+    private func hideReminderBubble() {
+        bubbleTimer?.invalidate()
+        bubbleTimer = nil
+
+        guard bubbleWindow.isVisible else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            bubbleWindow.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            Task { @MainActor in
+                self?.bubbleWindow.orderOut(nil)
+            }
+        }
+    }
+
+    private func positionBubbleWindow() {
+        guard let screen = window.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        let bubbleSize = bubbleWindow.frame.size
+        let petFrame = window.frame
+
+        var origin = CGPoint(
+            x: petFrame.midX - bubbleSize.width / 2,
+            y: petFrame.maxY - 8
+        )
+
+        if origin.y + bubbleSize.height > visible.maxY - Self.bubbleScreenInset {
+            origin.y = petFrame.minY - bubbleSize.height + 18
+        }
+
+        origin.x = min(
+            max(origin.x, visible.minX + Self.bubbleScreenInset),
+            visible.maxX - bubbleSize.width - Self.bubbleScreenInset
+        )
+        origin.y = min(
+            max(origin.y, visible.minY + Self.bubbleScreenInset),
+            visible.maxY - bubbleSize.height - Self.bubbleScreenInset
+        )
+
+        bubbleWindow.setFrameOrigin(origin)
+    }
+
     private func tick() {
         let frameCount = spriteStore.frameCount(for: action)
         guard frameCount > 0 else { return }
@@ -717,6 +1014,9 @@ final class PetController: NSObject {
             snapWindowToRestCorner()
         } else if followsDock && !dragActive {
             snapWindowToDock(centered: false)
+        }
+        if bubbleWindow.isVisible {
+            positionBubbleWindow()
         }
 
         if finalFrameHoldTicksRemaining > 0 {
@@ -879,6 +1179,7 @@ final class PetController: NSObject {
                 break
             }
             switchTo(nextAction)
+            showPendingReminderBubbleIfNeeded()
             return
         }
 
@@ -916,6 +1217,7 @@ final class PetController: NSObject {
         }
 
         switchTo(nextAction)
+        showPendingReminderBubbleIfNeeded()
     }
 
     private func resumeWalking(preferred: PetAction) {
@@ -1045,6 +1347,31 @@ final class PetController: NSObject {
 
     private func finalFrameHoldTicks(for action: PetAction) -> Int {
         Int(round(action.finalFrameHoldDuration * action.framesPerSecond))
+    }
+
+    private static func randomMealReminderMessage() -> String {
+        [
+            "到饭点啦，好好吃饭。",
+            "猫猫开饭啦，你也要认真吃饭。",
+            "先去吃点热乎的吧，别饿着自己。",
+            "休息一下吃饭啦，身体也要被照顾。"
+        ].randomElement() ?? "到饭点啦，好好吃饭。"
+    }
+
+    private static func randomRestReminderMessage() -> String {
+        [
+            "休息一下吧，眼睛也需要放松。",
+            "猫猫先睡会儿，你也缓一缓。",
+            "工作暂停一下，伸个懒腰。"
+        ].randomElement() ?? "休息一下吧，眼睛也需要放松。"
+    }
+
+    private static func randomIdleReminderMessage() -> String {
+        [
+            "忙太久啦，摸摸猫猫放松一下。",
+            "猫猫在看你，记得喝水休息。",
+            "歇一小会儿，再继续也不迟。"
+        ].randomElement() ?? "忙太久啦，摸摸猫猫放松一下。"
     }
 
     private static func clampedX(_ value: CGFloat, windowWidth: CGFloat, track: CGRect) -> CGFloat {

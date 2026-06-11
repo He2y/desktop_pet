@@ -2,7 +2,7 @@
 
 A macOS desktop pet app built with Swift/AppKit. The pet stays above the Dock, walks left and right, reacts to hover with a teaser animation, and supports eating, sleeping, petting, scratching, and dragged poses.
 
-The menu bar and right-click menus include mode switching plus size and opacity sliders. Appearance and mode settings are saved automatically and can be restored with `Reset Appearance`.
+The menu bar and right-click menus include mode switching, reminder settings, launch-at-login, plus size and opacity sliders. Appearance, mode, and reminder settings are saved automatically.
 
 ## Modes
 
@@ -11,9 +11,14 @@ The menu bar and right-click menus include mode switching plus size and opacity 
 
 ## Life Reminders
 
-- Meal reminders at `08:00`, `12:30`, and `18:30`: the cat walks to a Dock edge and eats.
-- Rest reminder every `50` minutes in Companion Mode: the cat lies down and sleeps.
-- Idle reminder after `12` minutes without interaction in Companion Mode: the cat plays the petting interaction.
+- Meal reminders are customizable from `Reminders > Reminder Settings...`: the cat walks to a Dock edge, eats, and shows a short bubble reminder to eat well.
+- Rest reminders are customizable in minutes and only run in Companion Mode.
+- Idle check-ins are customizable in minutes and only run in Companion Mode.
+- `Reminders` also exposes quick on/off toggles and `Preview Meal Reminder`.
+
+## Launch at Login
+
+Use `Launch at Login > Launch at Login` from the menu bar or right-click menu to toggle automatic startup. If macOS asks for approval, use `Launch at Login > Open Login Items Settings...` and enable Desktop Pet in System Settings.
 
 ## Current Actions
 
