@@ -1,0 +1,26 @@
+.DS_Store
+
+# Swift Package Manager and local build outputs
+.build/
+dist/
+*.app/
+
+# Temporary extracted video frames
+tmp/
+
+# Legacy/intermediate image-generation assets
+assets/image2_keyframes_alpha/
+assets/image2_keyframes_raw/
+assets/image2_motion_alpha/
+assets/image2_motion_raw/
+assets/motion_gifs/
+assets/motion_sprites/
+assets/previews/
+assets/sprites_image2/
+
+# Superseded preview/report files from earlier asset generations
+assets/image2_keyframes_preview.jpg
+assets/motion_sprite_preview_contact_sheet.png
+assets/motion_sprite_report.json
+assets/sprite_preview_contact_sheet.png
+assets/sprite_report.json

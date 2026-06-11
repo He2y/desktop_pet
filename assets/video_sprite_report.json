@@ -1,0 +1,121 @@
+{
+  "generator": "video source sprites",
+  "canvas": "512x512",
+  "actions": {
+    "walk": {
+      "png_count": 97,
+      "min_margin_px": 25,
+      "bottom_margin_min_mean_max": [
+        25,
+        26.9,
+        28
+      ],
+      "width_min_mean_max": [
+        388,
+        404.9,
+        418
+      ],
+      "height_min_mean_max": [
+        197,
+        204.2,
+        210
+      ]
+    },
+    "walk_left": {
+      "png_count": 97,
+      "min_margin_px": 25,
+      "bottom_margin_min_mean_max": [
+        25,
+        26.9,
+        28
+      ],
+      "width_min_mean_max": [
+        388,
+        404.9,
+        418
+      ],
+      "height_min_mean_max": [
+        197,
+        204.2,
+        210
+      ]
+    },
+    "teaser": {
+      "png_count": 97,
+      "min_margin_px": 25,
+      "bottom_margin_min_mean_max": [
+        25,
+        26.4,
+        28
+      ],
+      "width_min_mean_max": [
+        271,
+        336.7,
+        428
+      ],
+      "height_min_mean_max": [
+        310,
+        368.4,
+        411
+      ]
+    },
+    "eat": {
+      "png_count": 241,
+      "min_margin_px": 25,
+      "bottom_margin_min_mean_max": [
+        25,
+        25.0,
+        25
+      ],
+      "width_min_mean_max": [
+        288,
+        297.2,
+        339
+      ],
+      "height_min_mean_max": [
+        329,
+        368.1,
+        432
+      ]
+    },
+    "scratch": {
+      "png_count": 241,
+      "min_margin_px": 26,
+      "bottom_margin_min_mean_max": [
+        26,
+        40.4,
+        59
+      ],
+      "width_min_mean_max": [
+        356,
+        385.2,
+        430
+      ],
+      "height_min_mean_max": [
+        348,
+        371.2,
+        389
+      ]
+    },
+    "drag": {
+      "png_count": 241,
+      "min_margin_px": 36,
+      "bottom_margin_min_mean_max": [
+        36,
+        52.6,
+        108
+      ],
+      "width_min_mean_max": [
+        243,
+        243.0,
+        243
+      ],
+      "height_min_mean_max": [
+        356,
+        408.0,
+        429
+      ]
+    }
+  },
+  "walk_left_is_horizontal_mirror_of_walk": true
+}
