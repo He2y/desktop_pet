@@ -24,8 +24,7 @@ enum SpriteStoreError: LocalizedError {
 final class SpriteStore {
     private let root: URL
     private let frameURLs: [PetAction: [URL]]
-    private var activeAction: PetAction?
-    private var activeFrames: [NSImage] = []
+    private let cache = NSCache<NSString, NSImage>()
 
     init(root: URL? = nil) throws {
         self.root = try root ?? Self.locateSpriteRoot()
@@ -34,6 +33,8 @@ final class SpriteStore {
             loadedURLs[action] = try Self.loadFrameURLs(for: action, root: self.root)
         }
         self.frameURLs = loadedURLs
+        cache.countLimit = 160
+        cache.totalCostLimit = 96 * 1024 * 1024
     }
 
     func frameCount(for action: PetAction) -> Int {
@@ -41,13 +42,22 @@ final class SpriteStore {
     }
 
     func image(for action: PetAction, index: Int) -> NSImage? {
-        guard frameCount(for: action) > 0 else { return nil }
-        do {
-            try prepare(action: action)
-        } catch {
+        let urls = frameURLs[action, default: []]
+        guard !urls.isEmpty else { return nil }
+
+        let normalizedIndex = index % urls.count
+        let cacheKey = "\(action.rawValue):\(normalizedIndex)" as NSString
+        if let cached = cache.object(forKey: cacheKey) {
+            return cached
+        }
+
+        let url = urls[normalizedIndex]
+        guard let image = NSImage(contentsOf: url) else {
             return nil
         }
-        return activeFrames[index % activeFrames.count]
+        image.isTemplate = false
+        cache.setObject(image, forKey: cacheKey, cost: Self.estimatedCost(for: image))
+        return image
     }
 
     static func locateSpriteRoot() throws -> URL {
@@ -80,23 +90,6 @@ final class SpriteStore {
         throw SpriteStoreError.spriteRootNotFound(candidates.map(\.path))
     }
 
-    private func prepare(action: PetAction) throws {
-        guard activeAction != action else { return }
-        let urls = frameURLs[action, default: []]
-        guard !urls.isEmpty else {
-            throw SpriteStoreError.noFrames(action: action.rawValue)
-        }
-
-        activeFrames = try urls.map { url in
-            guard let image = NSImage(contentsOf: url) else {
-                throw SpriteStoreError.imageLoadFailed(url)
-            }
-            image.isTemplate = false
-            return image
-        }
-        activeAction = action
-    }
-
     private static func loadFrameURLs(for action: PetAction, root: URL) throws -> [URL] {
         let actionURL = root.appendingPathComponent(action.rawValue, isDirectory: true)
         guard FileManager.default.fileExists(atPath: actionURL.path) else {
@@ -115,5 +108,12 @@ final class SpriteStore {
         }
 
         return urls
+    }
+
+    private static func estimatedCost(for image: NSImage) -> Int {
+        let representation = image.representations.first
+        let width = representation?.pixelsWide ?? Int(image.size.width)
+        let height = representation?.pixelsHigh ?? Int(image.size.height)
+        return max(1, width * height * 4)
     }
 }

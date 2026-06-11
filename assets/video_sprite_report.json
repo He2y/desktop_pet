@@ -1,119 +1,155 @@
 {
-  "generator": "video source sprites",
-  "canvas": "512x512",
+  "generator": "video source sprites optimized for runtime",
+  "canvas": "384x384",
   "actions": {
     "walk": {
       "png_count": 97,
-      "min_margin_px": 25,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 19,
       "bottom_margin_min_mean_max": [
-        25,
-        26.9,
-        28
+        19,
+        20.1,
+        21
       ],
       "width_min_mean_max": [
-        388,
-        404.9,
-        418
+        291,
+        303.6,
+        314
       ],
       "height_min_mean_max": [
-        197,
-        204.2,
-        210
+        148,
+        153.1,
+        158
       ]
     },
     "walk_left": {
       "png_count": 97,
-      "min_margin_px": 25,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 19,
       "bottom_margin_min_mean_max": [
-        25,
-        26.9,
-        28
+        19,
+        20.1,
+        21
       ],
       "width_min_mean_max": [
-        388,
-        404.9,
-        418
+        291,
+        303.6,
+        314
       ],
       "height_min_mean_max": [
-        197,
-        204.2,
-        210
+        148,
+        153.1,
+        158
       ]
     },
     "teaser": {
       "png_count": 97,
-      "min_margin_px": 25,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 18,
       "bottom_margin_min_mean_max": [
-        25,
-        26.4,
-        28
+        18,
+        19.5,
+        21
       ],
       "width_min_mean_max": [
-        271,
-        336.7,
-        428
+        203,
+        253.0,
+        322
       ],
       "height_min_mean_max": [
-        310,
-        368.4,
-        411
+        233,
+        277.0,
+        310
       ]
     },
     "eat": {
       "png_count": 241,
-      "min_margin_px": 25,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 18,
       "bottom_margin_min_mean_max": [
-        25,
-        25.0,
-        25
+        18,
+        18.9,
+        19
       ],
       "width_min_mean_max": [
-        288,
-        297.2,
-        339
+        217,
+        223.6,
+        255
       ],
       "height_min_mean_max": [
-        329,
-        368.1,
-        432
+        247,
+        276.1,
+        324
       ]
     },
     "scratch": {
       "png_count": 241,
-      "min_margin_px": 26,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 19,
       "bottom_margin_min_mean_max": [
-        26,
-        40.4,
-        59
+        19,
+        30.1,
+        44
       ],
       "width_min_mean_max": [
-        356,
-        385.2,
-        430
+        268,
+        289.7,
+        324
       ],
       "height_min_mean_max": [
-        348,
-        371.2,
-        389
+        261,
+        278.8,
+        293
       ]
     },
     "drag": {
       "png_count": 241,
-      "min_margin_px": 36,
+      "sizes": [
+        [
+          384,
+          384
+        ]
+      ],
+      "min_margin_px": 26,
       "bottom_margin_min_mean_max": [
-        36,
-        52.6,
-        108
+        26,
+        38.9,
+        81
       ],
       "width_min_mean_max": [
-        243,
-        243.0,
-        243
+        183,
+        183.0,
+        183
       ],
       "height_min_mean_max": [
-        356,
-        408.0,
-        429
+        267,
+        306.7,
+        323
       ]
     }
   },

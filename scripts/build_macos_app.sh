@@ -18,7 +18,8 @@ mkdir -p "$APP_PATH/Contents/Resources/assets"
 cp "$ROOT_DIR/.build/release/DesktopPet" "$APP_PATH/Contents/MacOS/DesktopPet"
 cp "$ROOT_DIR/macos/Info.plist" "$APP_PATH/Contents/Info.plist"
 ditto "$ROOT_DIR/assets/sprites" "$APP_PATH/Contents/Resources/assets/sprites"
-if [[ -d "$ROOT_DIR/assets/gifs" ]]; then
+
+if [[ "${INCLUDE_GIF_PREVIEWS:-0}" == "1" && -d "$ROOT_DIR/assets/gifs" ]]; then
   ditto "$ROOT_DIR/assets/gifs" "$APP_PATH/Contents/Resources/assets/gifs"
 fi
 

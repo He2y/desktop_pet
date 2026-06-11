@@ -12,6 +12,7 @@ from PIL import Image, ImageChops
 
 
 SIZE = 512
+RUNTIME_SIZE = 384
 TMP_ROOT = Path("tmp/video_frames")
 OUT_ROOT = Path("assets/sprites")
 REPORT_PATH = Path("assets/video_sprite_report.json")
@@ -228,13 +229,18 @@ def process_action(action: str, config: ActionConfig) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for index, frame in enumerate(keyed):
-        normalize(
+        normalized = normalize(
             frame,
             crop_box=crop_box,
             visible_box=visible_box,
             target_long_edge=config.target_long_edge,
             bottom_margin=config.bottom_margin,
-        ).save(out_dir / f"frame_{index:03d}.png")
+        )
+        normalized.resize((RUNTIME_SIZE, RUNTIME_SIZE), Image.Resampling.LANCZOS).save(
+            out_dir / f"frame_{index:03d}.png",
+            optimize=True,
+            compress_level=9,
+        )
 
     return len(keyed)
 
@@ -248,15 +254,15 @@ def mirror_walk() -> int:
     count = 0
     for path in sorted(source_dir.glob("frame_*.png")):
         img = Image.open(path).convert("RGBA").transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-        img.save(target_dir / path.name)
+        img.save(target_dir / path.name, optimize=True, compress_level=9)
         count += 1
     return count
 
 
 def validate(actions: list[str]) -> dict[str, object]:
     report: dict[str, object] = {
-        "generator": "video source sprites",
-        "canvas": f"{SIZE}x{SIZE}",
+        "generator": "video source sprites optimized for runtime",
+        "canvas": f"{RUNTIME_SIZE}x{RUNTIME_SIZE}",
         "actions": {},
         "walk_left_is_horizontal_mirror_of_walk": True,
     }
@@ -267,14 +273,18 @@ def validate(actions: list[str]) -> dict[str, object]:
         heights: list[int] = []
         margins: list[int] = []
         bottom_margins: list[int] = []
+        sizes: set[tuple[int, int]] = set()
         for path in files:
-            box = bbox_for(Image.open(path))
+            image = Image.open(path).convert("RGBA")
+            sizes.add(image.size)
+            box = bbox_for(image)
             widths.append(box[2] - box[0])
             heights.append(box[3] - box[1])
-            margins.append(min(box[0], box[1], SIZE - box[2], SIZE - box[3]))
-            bottom_margins.append(SIZE - box[3])
+            margins.append(min(box[0], box[1], image.width - box[2], image.height - box[3]))
+            bottom_margins.append(image.height - box[3])
         actions_report[action] = {
             "png_count": len(files),
+            "sizes": sorted([list(size) for size in sizes]),
             "min_margin_px": int(min(margins)) if margins else None,
             "bottom_margin_min_mean_max": (
                 [
