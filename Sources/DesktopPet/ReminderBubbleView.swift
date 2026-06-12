@@ -20,28 +20,30 @@ final class ReminderBubbleView: NSView {
     }
 
     func update(message: String) -> CGSize {
-        label.stringValue = message
+        let attributedMessage = Self.attributedMessage(message)
+        label.attributedStringValue = attributedMessage
 
-        let maxTextWidth = Self.maxBubbleWidth - Self.horizontalPadding * 2
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: label.font ?? NSFont.systemFont(ofSize: 14, weight: .semibold)
-        ]
-        let textRect = (message as NSString).boundingRect(
-            with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: attributes
+        let naturalRect = attributedMessage.boundingRect(
+            with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
         )
 
         let width = min(
             Self.maxBubbleWidth,
-            max(Self.minBubbleWidth, ceil(textRect.width) + Self.horizontalPadding * 2)
+            max(Self.minBubbleWidth, ceil(naturalRect.width) + Self.horizontalPadding * 2)
         )
-        let height = ceil(textRect.height) + Self.verticalPadding * 2 + Self.tailHeight
+        let textWidth = width - Self.horizontalPadding * 2
+        let wrappedRect = attributedMessage.boundingRect(
+            with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        )
+        let labelHeight = ceil(wrappedRect.height) + 6
+        let height = labelHeight + Self.verticalPadding * 2 + Self.tailHeight
         label.frame = CGRect(
             x: Self.horizontalPadding,
             y: Self.tailHeight + Self.verticalPadding,
-            width: width - Self.horizontalPadding * 2,
-            height: ceil(textRect.height) + 2
+            width: textWidth,
+            height: labelHeight
         )
 
         frame = CGRect(origin: frame.origin, size: CGSize(width: width, height: height))
@@ -88,12 +90,31 @@ final class ReminderBubbleView: NSView {
         label.font = .systemFont(ofSize: 14, weight: .semibold)
         label.textColor = NSColor(calibratedRed: 0.20, green: 0.16, blue: 0.12, alpha: 1)
         label.maximumNumberOfLines = 0
-        label.lineBreakMode = .byWordWrapping
+        label.lineBreakMode = .byCharWrapping
         label.alignment = .center
         label.drawsBackground = false
         label.isBordered = false
         label.isEditable = false
         label.isSelectable = false
+        label.cell?.wraps = true
+        label.cell?.isScrollable = false
+        label.cell?.lineBreakMode = .byCharWrapping
         addSubview(label)
+    }
+
+    private static func attributedMessage(_ message: String) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineBreakMode = .byCharWrapping
+        paragraph.lineSpacing = 1
+
+        return NSAttributedString(
+            string: message,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 14, weight: .semibold),
+                .foregroundColor: NSColor(calibratedRed: 0.20, green: 0.16, blue: 0.12, alpha: 1),
+                .paragraphStyle: paragraph
+            ]
+        )
     }
 }
