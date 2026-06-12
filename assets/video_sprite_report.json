@@ -3,7 +3,7 @@
   "canvas": "384x384",
   "actions": {
     "walk": {
-      "png_count": 97,
+      "png_count": 241,
       "sizes": [
         [
           384,
@@ -13,22 +13,22 @@
       "min_margin_px": 19,
       "bottom_margin_min_mean_max": [
         19,
-        20.1,
-        21
+        20.0,
+        22
       ],
       "width_min_mean_max": [
-        291,
-        303.6,
-        314
+        316,
+        318.7,
+        322
       ],
       "height_min_mean_max": [
-        148,
-        153.1,
-        158
+        156,
+        158.4,
+        161
       ]
     },
     "walk_left": {
-      "png_count": 97,
+      "png_count": 241,
       "sizes": [
         [
           384,
@@ -38,18 +38,18 @@
       "min_margin_px": 19,
       "bottom_margin_min_mean_max": [
         19,
-        20.1,
-        21
+        20.0,
+        22
       ],
       "width_min_mean_max": [
-        291,
-        303.6,
-        314
+        316,
+        318.7,
+        322
       ],
       "height_min_mean_max": [
-        148,
-        153.1,
-        158
+        156,
+        158.4,
+        161
       ]
     },
     "teaser": {
